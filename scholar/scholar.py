@@ -166,6 +166,7 @@ import os
 import re
 import sys
 import warnings
+import time
 
 try:
     # Try importing for Python 3
@@ -1042,6 +1043,7 @@ class ScholarQuerier(object):
         if len(self.articles)==0 or self.articles[0]['url_citations'] is None:
             return 
         citations_url=self.articles[0]['url_citations']
+        citations_num=self.articles[0]['num_citations']
         self.clear_articles()
 
         html = self._get_http_response(url=citations_url,
@@ -1049,8 +1051,17 @@ class ScholarQuerier(object):
                                        err_msg='results retrieval failed')
         if html is None:
             return
-
         self.parse(html)
+        while len(self.articles)<citations_num:
+            # this is a workaround to fetch all the citations, ought to be better integrated at some point
+            time.sleep(1)
+            html = self._get_http_response(url=citations_url+'&start='+str(len(self.articles)),
+                                           log_msg='dump of query response HTML',
+                                           err_msg='results retrieval failed')
+            if html is None:
+                return
+
+            self.parse(html)
 
     def get_citation_data(self, article):
         """
@@ -1069,7 +1080,6 @@ class ScholarQuerier(object):
                                        err_msg='requesting citation data failed')
         if data is None:
             return False
-
         article.set_citation_data(data)
         return True
 
