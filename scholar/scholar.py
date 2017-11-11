@@ -290,16 +290,17 @@ class ScholarArticle(object):
         # ordering index:
         self.attrs = {
             'title':         [None, 'Title',          0],
-            'url':           [None, 'URL',            1],
-            'year':          [None, 'Year',           2],
-            'num_citations': [0,    'Citations',      3],
-            'num_versions':  [0,    'Versions',       4],
-            'cluster_id':    [None, 'Cluster ID',     5],
-            'url_pdf':       [None, 'PDF link',       6],
-            'url_citations': [None, 'Citations list', 7],
-            'url_versions':  [None, 'Versions list',  8],
-            'url_citation':  [None, 'Citation link',  9],
-            'excerpt':       [None, 'Excerpt',       10],
+            'author':        [None, 'Author',         1],
+            'url':           [None, 'URL',            2],
+            'year':          [None, 'Year',           3],
+            'num_citations': [0,    'Citations',      4],
+            'num_versions':  [0,    'Versions',       5],
+            'cluster_id':    [None, 'Cluster ID',     6],
+            'url_pdf':       [None, 'PDF link',       7],
+            'url_citations': [None, 'Citations list', 8],
+            'url_versions':  [None, 'Versions list',  9],
+            'url_citation':  [None, 'Citation link', 10],
+            'excerpt':       [None, 'Excerpt',       11],
         }
 
         # The citation data in one of the standard export formats,
@@ -533,32 +534,6 @@ class ScholarArticleParser(object):
         return parts[0] + '?' + '&'.join(res)
 
 
-class ScholarArticleParser120201(ScholarArticleParser):
-    """
-    This class reflects update to the Scholar results page layout that
-    Google recently.
-    """
-    def _parse_article(self, div):
-        self.article = ScholarArticle()
-
-        for tag in div:
-            if not hasattr(tag, 'name'):
-                continue
-
-            if tag.name == 'h3' and self._tag_has_class(tag, 'gs_rt') and tag.a:
-                self.article['title'] = ''.join(tag.a.findAll(text=True))
-                self.article['url'] = self._path2url(tag.a['href'])
-                if self.article['url'].endswith('.pdf'):
-                    self.article['url_pdf'] = self.article['url']
-
-            if tag.name == 'div' and self._tag_has_class(tag, 'gs_a'):
-                year = self.year_re.findall(tag.text)
-                self.article['year'] = year[0] if len(year) > 0 else None
-
-            if tag.name == 'div' and self._tag_has_class(tag, 'gs_fl'):
-                self._parse_links(tag)
-
-
 class ScholarArticleParser120726(ScholarArticleParser):
     """
     This class reflects update to the Scholar results page layout that
@@ -615,8 +590,11 @@ class ScholarArticleParser120726(ScholarArticleParser):
                     self.article['title'] = ''.join(tag.h3.findAll(text=True))
 
                 if tag.find('div', {'class': 'gs_a'}):
-                    year = self.year_re.findall(tag.find('div', {'class': 'gs_a'}).text)
+                    gs_a = tag.find('div', {'class': 'gs_a'}).text
+                    year = self.year_re.findall(gs_a)
                     self.article['year'] = year[0] if len(year) > 0 else None
+                    author = gs_a.split('- ')
+                    self.article['author'] = author[0] if len(author) > 0 else None
 
                 if tag.find('div', {'class': 'gs_fl'}):
                     self._parse_links(tag.find('div', {'class': 'gs_fl'}))
@@ -959,7 +937,6 @@ class ScholarQuerier(object):
         + '&as_sdt=1,5' \
         + '&as_sdtp=' \
         + '&num=%(num)s' \
-        + '&start=%(start)s' \
         + '&scis=%(scis)s' \
         + '%(scisf)s' \
         + '&hl=en&lang=all&instq=&inst=569367360547434339&save='
@@ -1125,25 +1102,21 @@ class ScholarQuerier(object):
             log_msg = 'HTTP response data follow'
         if err_msg is None:
             err_msg = 'request failed'
-        try:
-            ScholarUtils.log('info', 'requesting %s' % unquote(url))
+        ScholarUtils.log('info', 'requesting %s' % unquote(url))
 
-            req = Request(url=url, headers={'User-Agent': ScholarConf.USER_AGENT})
-            hdl = self.opener.open(req)
-            html = hdl.read()
+        req = Request(url=url, headers={'User-Agent': ScholarConf.USER_AGENT})
+        hdl = self.opener.open(req)
+        html = hdl.read()
 
-            ScholarUtils.log('debug', log_msg)
-            ScholarUtils.log('debug', '>>>>' + '-'*68)
-            ScholarUtils.log('debug', 'url: %s' % hdl.geturl())
-            ScholarUtils.log('debug', 'result: %s' % hdl.getcode())
-            ScholarUtils.log('debug', 'headers:\n' + str(hdl.info()))
-            ScholarUtils.log('debug', 'data:\n' + html.decode('utf-8')) # For Python 3
-            ScholarUtils.log('debug', '<<<<' + '-'*68)
+        ScholarUtils.log('debug', log_msg)
+        ScholarUtils.log('debug', '>>>>' + '-'*68)
+        ScholarUtils.log('debug', 'url: %s' % hdl.geturl())
+        ScholarUtils.log('debug', 'result: %s' % hdl.getcode())
+        ScholarUtils.log('debug', 'headers:\n' + str(hdl.info()))
+        ScholarUtils.log('debug', 'data:\n' + html.decode('utf-8')) # For Python 3
+        ScholarUtils.log('debug', '<<<<' + '-'*68)
 
-            return html
-        except Exception as err:
-            ScholarUtils.log('info', err_msg + ': %s' % err)
-            return None
+        return html
 
 
 def txt(querier, with_globals):
@@ -1286,7 +1259,7 @@ scholar.py -c 5 -a "albert einstein" -t --none "quantum theory" --after 1970"""
            or options.after or options.before:
             print('Cluster ID queries do not allow additional search arguments.')
             return 1
-    if options.cites is not None:
+    if options.cites:
         if options.cluster_id is None:
             print('Cites queries require cluster ID.')
             return 1
