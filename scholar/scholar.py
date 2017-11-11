@@ -169,7 +169,6 @@ import os
 import re
 import sys
 import warnings
-import time
 
 try:
     # Try importing for Python 3
@@ -655,10 +654,8 @@ class ScholarQuery(object):
             num_page_results,
             'maximum number of results on page must be numeric')
 
-    def set_start(self, page_num):
-        self.start = ScholarUtils.ensure_int(
-            page_num * self.num_results,
-            'Page number')
+    def set_start(self, start):
+        self.start = ScholarUtils.ensure_int(start, 'start must be numeric')
 
     def get_url(self):
         """
@@ -725,13 +722,18 @@ class ClusterScholarQuery(ScholarQuery):
         + 'cluster=%(cluster)s' \
         + '%(num)s' \
         + '%(start)s'
+    SCHOLAR_CLUSTER_CITES_URL = ScholarConf.SCHOLAR_SITE + '/scholar?' \
+        + 'cites=%(cluster)s' \
+        + '%(num)s' \
+        + '%(start)s'
 
-    def __init__(self, cluster=None):
+    def __init__(self, cluster=None, cites=False):
         ScholarQuery.__init__(self)
         self._add_attribute_type('num_results', 'Results', 0)
         self._add_attribute_type('page', 'Page', 0)
         self.cluster = None
         self.set_cluster(cluster)
+        self.set_cites(cites)
 
     def set_cluster(self, cluster):
         """
@@ -740,11 +742,19 @@ class ClusterScholarQuery(ScholarQuery):
         msg = 'cluster ID must be numeric'
         self.cluster = ScholarUtils.ensure_int(cluster, msg)
 
+    def set_cites(self, cites):
+        """
+        Sets search to a Google Scholar results cites cluster ID.
+        """
+        self.cites = cites
+
     def get_url(self):
         if self.cluster is None:
             raise QueryArgumentError('cluster query needs cluster ID')
-
-        urlargs = {'cluster': self.cluster }
+        
+        urlargs = {
+            'cluster': self.cluster
+        }
 
         for key, val in urlargs.items():
             urlargs[key] = quote(encode(val))
@@ -757,8 +767,11 @@ class ClusterScholarQuery(ScholarQuery):
         # paging
         urlargs['start'] = ('&start=%d' % self.start
                           if self.start is not None else 0)
-
-        return self.SCHOLAR_CLUSTER_URL % urlargs
+        
+        if self.cites:
+            return self.SCHOLAR_CLUSTER_CITES_URL % urlargs
+        else:
+            return self.SCHOLAR_CLUSTER_URL % urlargs
 
 
 class SearchScholarQuery(ScholarQuery):
@@ -1053,38 +1066,6 @@ class ScholarQuerier(object):
 
         self.parse(html)
 
-    def get_citations(self,query):
-        """
-        Given a query, it retrieve the list of articles that cite the first 
-        article returned by the query.
-        It's done in two steps: first it retrieves the citations url of the 
-        first article, then it retrieves the articles that cite it
-        """
-        self.send_query(query)
-
-        if len(self.articles)==0 or self.articles[0]['url_citations'] is None:
-            return 
-        citations_url=self.articles[0]['url_citations']
-        citations_num=self.articles[0]['num_citations']
-        self.clear_articles()
-
-        html = self._get_http_response(url=citations_url,
-                                       log_msg='dump of query response HTML',
-                                       err_msg='results retrieval failed')
-        if html is None:
-            return
-        self.parse(html)
-        while len(self.articles)<citations_num:
-            # this is a workaround to fetch all the citations, ought to be better integrated at some point
-            time.sleep(1)
-            html = self._get_http_response(url=citations_url+'&start='+str(len(self.articles)),
-                                           log_msg='dump of query response HTML',
-                                           err_msg='results retrieval failed')
-            if html is None:
-                return
-
-            self.parse(html)
-
     def get_citation_data(self, article):
         """
         Given an article, retrieves citation link. Note, this requires that
@@ -1245,8 +1226,8 @@ scholar.py -c 5 -a "albert einstein" -t --none "quantum theory" --after 1970"""
                      help='Do not include patents in results')
     group.add_option('--no-citations', action='store_true', default=False,
                      help='Do not include citations in results')
-    group.add_option('--citations-only', action='store_true', default=False,
-                     help='Prints only the citations list in results')
+    group.add_option('--cites', action='store_true', default=False,
+                     help='Prints only the citations list in results, requires cluster ID')
     group.add_option('-C', '--cluster-id', metavar='CLUSTER_ID', default=None,
                      help='Do not search, just use articles in given cluster ID')
     group.add_option('-c', '--count', type='int', default=None,
@@ -1305,6 +1286,10 @@ scholar.py -c 5 -a "albert einstein" -t --none "quantum theory" --after 1970"""
            or options.after or options.before:
             print('Cluster ID queries do not allow additional search arguments.')
             return 1
+    if options.cites is not None:
+        if options.cluster_id is None:
+            print('Cites queries require cluster ID.')
+            return 1
 
     querier = ScholarQuerier()
     settings = ScholarSettings()
@@ -1324,7 +1309,7 @@ scholar.py -c 5 -a "albert einstein" -t --none "quantum theory" --after 1970"""
     querier.apply_settings(settings)
 
     if options.cluster_id:
-        query = ClusterScholarQuery(cluster=options.cluster_id)
+        query = ClusterScholarQuery(cluster=options.cluster_id, cites=options.cites)
     else:
         query = SearchScholarQuery()
         if options.author:
@@ -1354,10 +1339,7 @@ scholar.py -c 5 -a "albert einstein" -t --none "quantum theory" --after 1970"""
     if options.start is not None:
         query.set_start(options.start)
     
-    if options.citations_only:
-        querier.get_citations(query)
-    else:
-        querier.send_query(query)
+    querier.send_query(query)
 
     if options.csv:
         csv(querier)
