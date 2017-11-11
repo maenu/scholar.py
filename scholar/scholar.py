@@ -1226,6 +1226,8 @@ scholar.py -c 5 -a "albert einstein" -t --none "quantum theory" --after 1970"""
     group = optparse.OptionGroup(parser, 'Miscellaneous')
     group.add_option('--cookie-file', metavar='FILE', default=None,
                      help='File to use for cookie storage. If given, will read any existing cookies if found at startup, and save resulting cookies in the end.')
+    group.add_option('--user-agent', metavar='USER_AGENT', default=None,
+                     help='User agent to use.')
     group.add_option('-d', '--debug', action='count', default=0,
                      help='Enable verbose logging to stderr. Repeated options increase detail of debug output.')
     group.add_option('-v', '--version', action='store_true', default=False,
@@ -1250,6 +1252,8 @@ scholar.py -c 5 -a "albert einstein" -t --none "quantum theory" --after 1970"""
 
     if options.cookie_file:
         ScholarConf.COOKIE_JAR_FILE = options.cookie_file
+    if options.user_agent:
+        ScholarConf.USER_AGENT = options.user_agent
 
     # Sanity-check the options: if they include a cluster ID query, it
     # makes no sense to have search arguments:
