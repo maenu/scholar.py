@@ -176,12 +176,12 @@ try:
     # pylint: disable-msg=E0611
     from urllib.request import HTTPCookieProcessor, Request, build_opener
     from urllib.parse import quote, unquote
-    from http.cookiejar import MozillaCookieJar
+    from http.cookiejar import LWPCookieJar
 except ImportError:
     # Fallback for Python 2
     from urllib2 import Request, build_opener, HTTPCookieProcessor
     from urllib import quote, unquote
-    from cookielib import MozillaCookieJar
+    from cookielib import LWPCookieJar
 
 # Import BeautifulSoup -- try 4 first, fall back to older
 try:
@@ -244,7 +244,7 @@ class ScholarConf(object):
     VERSION = '2.12'
     LOG_LEVEL = 1
     MAX_PAGE_RESULTS = 10 # Current default for per-page results
-    SCHOLAR_SITE = 'http://scholar.google.com'
+    SCHOLAR_SITE = 'https://scholar.google.com'
 
     # USER_AGENT = 'Mozilla/5.0 (X11; U; FreeBSD i386; en-US; rv:1.9.2.9) Gecko/20100913 Firefox/3.6.9'
     # Let's update at this point (3/14):
@@ -959,7 +959,7 @@ class ScholarQuerier(object):
     def __init__(self):
         self.articles = []
         self.query = None
-        self.cjar = MozillaCookieJar()
+        self.cjar = LWPCookieJar()
 
         # If we have a cookie file, load it:
         if ScholarConf.COOKIE_JAR_FILE and \
@@ -970,7 +970,7 @@ class ScholarQuerier(object):
                 ScholarUtils.log('info', 'loaded cookies file')
             except Exception as msg:
                 ScholarUtils.log('warn', 'could not load cookies file: %s' % msg)
-                self.cjar = MozillaCookieJar() # Just to be safe
+                self.cjar = LWPCookieJar() # Just to be safe
 
         self.opener = build_opener(HTTPCookieProcessor(self.cjar))
         self.settings = None # Last settings object, if any
