@@ -551,7 +551,6 @@ class ScholarArticleParser120726(ScholarArticleParser):
                     self._parse_links(tag.find('div', {'class': 'gs_or_ggsm'}))
 
             sidetag = tag.find('div', {'class': 'gs_or_ggsm'})
-            print sidetag
             if sidetag and sidetag.a and str(sidetag).lower().find('[pdf]') >= 0:
                 self.article['url_pdf'] = self._path2url(sidetag.a['href'])
 
