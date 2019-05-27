@@ -244,7 +244,7 @@ class ScholarConf(object):
     VERSION = '2.12'
     LOG_LEVEL = 1
     MAX_PAGE_RESULTS = 10 # Current default for per-page results
-    SCHOLAR_SITE = 'http://scholar.google.com'
+    SCHOLAR_SITE = 'https://scholar.google.com'
 
     # USER_AGENT = 'Mozilla/5.0 (X11; U; FreeBSD i386; en-US; rv:1.9.2.9) Gecko/20100913 Firefox/3.6.9'
     # Let's update at this point (3/14):
@@ -547,10 +547,11 @@ class ScholarArticleParser120726(ScholarArticleParser):
                 continue
 
             if str(tag).lower().find('.pdf'):
-                if tag.find('div', {'class': 'gs_ttss'}):
-                    self._parse_links(tag.find('div', {'class': 'gs_ttss'}))
+                if tag.find('div', {'class': 'gs_or_ggsm'}):
+                    self._parse_links(tag.find('div', {'class': 'gs_or_ggsm'}))
 
-            sidetag = tag.find('div', {'class': 'gs_ttss'})
+            sidetag = tag.find('div', {'class': 'gs_or_ggsm'})
+            print sidetag
             if sidetag and sidetag.a and str(sidetag).lower().find('[pdf]') >= 0:
                 self.article['url_pdf'] = self._path2url(sidetag.a['href'])
 
