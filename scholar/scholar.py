@@ -217,6 +217,10 @@ class QueryArgumentError(Error):
     """A query did not have a suitable set of arguments."""
 
 
+class CaptchaError(Error):
+    """Requires solving captcha to get results."""
+
+
 class SoupKitchen(object):
     """Factory for creating BeautifulSoup instances."""
 
@@ -392,6 +396,9 @@ class ScholarArticleParser(object):
         resulting instances via the handle_article callback.
         """
         self.soup = SoupKitchen.make_soup(html)
+        
+        if self.soup.find_all(id='gs_captcha_ccl'):
+            raise CaptchError
 
         # This parses any global, non-itemized attributes from the page.
         self._parse_globals()
@@ -1224,10 +1231,12 @@ scholar.py -c 5 -a "albert einstein" -t --none "quantum theory" --after 1970"""
     parser.add_option_group(group)
 
     group = optparse.OptionGroup(parser, 'Miscellaneous')
-    group.add_option('--cookie-file', metavar='FILE', default=None,
-                     help='File to use for cookie storage. If given, will read any existing cookies if found at startup, and save resulting cookies in the end.')
+    group.add_option('--scholar-site', metavar='SCHOLAR_SITE', default=None,
+                     help='Scholar site to use.')
     group.add_option('--user-agent', metavar='USER_AGENT', default=None,
                      help='User agent to use.')
+    group.add_option('--cookie-file', metavar='FILE', default=None,
+                     help='File to use for cookie storage. If given, will read any existing cookies if found at startup, and save resulting cookies in the end.')
     group.add_option('-d', '--debug', action='count', default=0,
                      help='Enable verbose logging to stderr. Repeated options increase detail of debug output.')
     group.add_option('-v', '--version', action='store_true', default=False,
@@ -1250,10 +1259,12 @@ scholar.py -c 5 -a "albert einstein" -t --none "quantum theory" --after 1970"""
         print('This is scholar.py %s.' % ScholarConf.VERSION)
         return 0
 
-    if options.cookie_file:
-        ScholarConf.COOKIE_JAR_FILE = options.cookie_file
+    if options.scholar_site:
+        ScholarConf.SCHOLAR_SITE = options.scholar_site
     if options.user_agent:
         ScholarConf.USER_AGENT = options.user_agent
+    if options.cookie_file:
+        ScholarConf.COOKIE_JAR_FILE = options.cookie_file
 
     # Sanity-check the options: if they include a cluster ID query, it
     # makes no sense to have search arguments:
