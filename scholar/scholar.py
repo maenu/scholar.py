@@ -248,7 +248,7 @@ class ScholarConf(object):
     VERSION = '2.12'
     LOG_LEVEL = 1
     MAX_PAGE_RESULTS = 10 # Current default for per-page results
-    SCHOLAR_SITE = 'https://scholar.google.com'
+    SCHOLAR_SITE = 'https://scholar.google.ch'
 
     # USER_AGENT = 'Mozilla/5.0 (X11; U; FreeBSD i386; en-US; rv:1.9.2.9) Gecko/20100913 Firefox/3.6.9'
     # Let's update at this point (3/14):
@@ -1232,8 +1232,6 @@ scholar.py -c 5 -a "albert einstein" -t --none "quantum theory" --after 1970"""
     parser.add_option_group(group)
 
     group = optparse.OptionGroup(parser, 'Miscellaneous')
-    group.add_option('--scholar-site', metavar='SCHOLAR_SITE', default=None,
-                     help='Scholar site to use.')
     group.add_option('--user-agent', metavar='USER_AGENT', default=None,
                      help='User agent to use.')
     group.add_option('--cookie-file', metavar='FILE', default=None,
@@ -1259,9 +1257,7 @@ scholar.py -c 5 -a "albert einstein" -t --none "quantum theory" --after 1970"""
     if options.version:
         print('This is scholar.py %s.' % ScholarConf.VERSION)
         return 0
-
-    if options.scholar_site:
-        ScholarConf.SCHOLAR_SITE = options.scholar_site
+    
     if options.user_agent:
         ScholarConf.USER_AGENT = options.user_agent
     if options.cookie_file:
