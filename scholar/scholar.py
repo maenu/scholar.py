@@ -512,7 +512,8 @@ class ScholarArticleParser(object):
     @staticmethod
     def _tag_results_checker(tag):
         return tag.name == 'div' \
-            and ScholarArticleParser._tag_has_class(tag, 'gs_r')
+            and ScholarArticleParser._tag_has_class(tag, 'gs_r') \
+            and tag.find_parent(id='gs_res_ccl_mid') is not None
 
     @staticmethod
     def _as_int(obj):
