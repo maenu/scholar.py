@@ -398,7 +398,7 @@ class ScholarArticleParser(object):
         self.soup = SoupKitchen.make_soup(html)
         
         if self.soup.find_all(id='gs_captcha_ccl'):
-            raise CaptchError()
+            raise CaptchaError()
 
         # This parses any global, non-itemized attributes from the page.
         self._parse_globals()
